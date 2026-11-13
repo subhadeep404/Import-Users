@@ -25,10 +25,10 @@ Param(
 function Get-UserBanner {
     <#
     .DESCRIPTION
-    Prints a banner for the current user.
+    Print banner for the current user.
 
     .PARAMETER Username
-    Username of the current user.
+    Username of the user.
     #>
     Param([string]$Username)
     Write-Host -foreground Gray "[+] Importing User: $Username"
@@ -38,13 +38,13 @@ function Get-UserBanner {
 function Test-UserExists {
     <#
     .DESCRIPTION
-    Checks if the user account already exists by checking against the SamAccountName.
+    Check if the user account already exists by checking against the SamAccountName.
 
     .PARAMETER SAM
     SamAccountName to be checked for the user.
 
     .PARAMETER BASEPATH
-    BasePath of the Organizational Unit's to check for the user.
+    BasePath of the Organizational Unit to check for the user.
     #>
 
     Param(
@@ -57,7 +57,7 @@ function Test-UserExists {
 function Test-DepartmentExists {
     <#
     .DESCRIPTION
-    Checks if the department's OU exist in the Basepath.
+    Checks if the sub-department OUs exist in the Department OU.
 
     .PARAMETER Department
     Department name to be checked.
@@ -79,14 +79,14 @@ function Test-DepartmentExists {
 
 }
 
-# Importing all the user records from the csv file, if file is empty display error and return.
+# Import all the user records from the csv file, if file is empty display error and exit the script.
 $users = @(Import-Csv -Path $Csv)
 if ($users.Count -eq 0) {
     Write-Host -ForegroundColor red "[-] The CSV file $Csv has no records"
     return
 }
 
-# Loop for inserting all the users.
+# Main loop for inserting all the users.
 foreach ($user in $users) {
     # Display the user to be imported.
     Get-UserBanner $user.'Display Name'
@@ -105,20 +105,20 @@ foreach ($user in $users) {
     $SecurePassword = ConvertTo-SecureString $user.'Password' -AsPlainText -Force
 
 
-    # If the Department OU does not exist continue to the next record.
+    # Check if the Department OU exists in the hierarchy, else continue with the next record.
     if ((Test-DepartmentExists $Department $BasePath) -eq $false) {
         Write-Host -ForegroundColor Red "[!] $Department does not exist."
         Write-Host -ForegroundColor Red "[!] Skipping record for $user"
         continue
     }
 
-    # If the user already exists in the department continue with the next user.
+    # Check if the user already exists by checking against the SAM database, if present continue with the next user.
     if ((Test-UserExists $SAM $BasePath)) {
         Write-Host -ForegroundColor Blue "[-] $Username already exists in $Department`n"
         continue
     }
     
-    # Crate the user if Department OU exists and the User is not already present under the department.
+    # Create the user if Department OU exists and the User is not already present under the department.
     New-ADUser -Name $Username `
     -GivenName $Firstname `
     -Surname $Lastname `
