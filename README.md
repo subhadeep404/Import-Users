@@ -101,24 +101,3 @@ Expected result: users already found under the base OU are reported as `[-] <nam
 Expected result: if a record's department has no matching OU, the script prints `[!] <Department> does not exist.` and skips that record. Be aware of the password exposure described under [Known Bugs](#4-known-bugs).
 
 ---
-
-## 4. Known Bugs
-
-| # | Title | Affected | Impact | Workaround |
-|---|---|---|---|---|
-| 1 | Plaintext password printed on skip | Main loop, "Skipping record for $user" message | When a record is skipped because its department OU is missing, the whole CSV row is written to the console, including the `Password` value. | Use throwaway lab passwords only; clear the console and any transcript afterwards. |
-| 2 | Department check does not match creation path | `Test-DepartmentExists`, `New-ADUser -Path` | The check searches the whole subtree under `-BasePath`, but the user is created in `OU=<Department>,<BasePath>`. A department OU nested deeper passes the check, then user creation fails. | Keep department OUs as direct children of `-BasePath`. |
-| 3 | Duplicate check limited to the base OU | `Test-UserExists` | `SamAccountName` must be unique across the domain. An existing account elsewhere in the domain is not detected, and creation fails. | Make sure SAM values are unique domain-wide before importing. |
-| 4 | Wildcard matching in lookups | `Test-UserExists`, `Test-DepartmentExists` (`-like`) | Values containing `*` can match unintended accounts or OUs. | Avoid wildcard characters in the `SAM` and `Department` columns. |
-| 5 | Common name collisions | `-Name` is set to `Display Name` | Two users with the same Display Name in the same department OU collide, and the SAM check does not catch it. | Use unique Display Names within a department. |
-| 6 | No CSV validation | Main loop | Missing columns or blank values are not checked. A blank `Password` makes `ConvertTo-SecureString` throw. Blank or over-long `SAM` values are not checked either. | Check the CSV for blank fields and SAM names over 20 characters before running. |
-| 7 | Department name not escaped in the DN | `-Path "OU=$Department,$BasePath"` | A department name containing a comma or other special DN character produces a malformed path. | Use simple department names without special characters. |
-
-### Limitations
-
-- No `-WhatIf` / `-Confirm` support; the script creates accounts immediately.
-- No `try/catch` error handling or log file; output is console text only, and there is no summary of created, skipped or failed records.
-- Passwords are stored in plain text in the CSV.
-- Supported PowerShell and OS versions are not documented (TBD).
-
-Found another issue? Please open an issue on the repository.
